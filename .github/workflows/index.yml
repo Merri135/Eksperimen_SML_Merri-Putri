@@ -1,4 +1,4 @@
-name: Data Preprocessing CI
+name: Preprocessing and Modeling CI
 
 on:
   push:
@@ -7,29 +7,39 @@ on:
     branches: [ main ]
 
 jobs:
-  preprocess:
+  preprocessing:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup Python
-      uses: actions/setup-python@v5
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
       with:
-        python-version: '3.9.13'
-        
-    - name: Install dependencies
+        python-version: '3.9'
+
+    - name: Install dependencies for preprocessing
       run: |
         python -m pip install --upgrade pip
-        pip install pandas numpy scikit-learn
-        
-    - name: Run data preprocessing script
+        pip install pandas
+
+    - name: Run preprocessing script
       run: |
-        python preprocessing/automated_merri.py
-        
-    - name: Upload preprocessed data as workflow artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: diabetes_cleaned
-        path: preprocessing/'diabetes_prediction_dataset.csv'
+        cd preprocessing
+        python automated_merri.py
+
+    - name: Configure Git
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "github-actions@github.com"
+
+    - name: Commit and push processed data
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git add . || echo "Nothing to add"
+        git diff --cached --quiet && echo "No changes to commit" || (
+          git commit -m "Update processed dataset by GitHub Actions"
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:main
+        )
